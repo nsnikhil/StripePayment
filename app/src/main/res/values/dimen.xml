@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="toolbarElevation">4dp</dimen>
+    <dimen name="eight">8dp</dimen>
+    <dimen name="sixteen">16dp</dimen>
+    <dimen name="drawerWidth">240dp</dimen>
+    <dimen name="imageSize">180dp</dimen>
+</resources>

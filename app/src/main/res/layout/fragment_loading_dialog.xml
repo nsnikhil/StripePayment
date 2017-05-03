@@ -1,0 +1,20 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    style="@style/horizontalLinearLayout"
+    android:layout_height="wrap_content"
+    android:padding="@dimen/sixteen"
+    tools:context="com.nrs.nsnik.stripepayment.fragments.dialogFragments.LoadingDialogFragment">
+
+   <ProgressBar
+       android:id="@+id/loadingProgress"
+       style="@style/progressBar" />
+
+    <TextView
+        style="@style/wrapContent"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginStart="@dimen/sixteen"
+        android:layout_gravity="center_vertical"
+        android:text="@string/justasec"/>
+
+</LinearLayout>
