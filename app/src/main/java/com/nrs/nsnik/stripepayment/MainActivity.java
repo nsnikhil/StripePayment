@@ -148,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
             return charge.getDescription();
             //Charge charge= Charge.create(params);
         } catch (AuthenticationException | InvalidRequestException | APIConnectionException | CardException | APIException e) {
+            messageDialog(e.toString());
             e.printStackTrace();
         }
         return null;
