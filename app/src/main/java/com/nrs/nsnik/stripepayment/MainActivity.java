@@ -8,13 +8,17 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.design.widget.Snackbar;
+import android.support.design.widget.TextInputEditText;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.nrs.nsnik.stripepayment.fragments.dialogFragments.LoadingDialogFragment;
@@ -28,9 +32,13 @@ import com.stripe.exception.APIException;
 import com.stripe.exception.AuthenticationException;
 import com.stripe.exception.CardException;
 import com.stripe.exception.InvalidRequestException;
+import com.stripe.model.Account;
+import com.stripe.model.AccountCollection;
 import com.stripe.model.Charge;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import butterknife.BindView;
@@ -41,10 +49,14 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.mainCardWidget) CardInputWidget mMainCadWidget;
     @BindView(R.id.mainToolbar) Toolbar mMainToolbar;
     @BindView(R.id.mainPay) Button mPay;
-    @BindView(R.id.mainRelativeLayout) RelativeLayout mCoordinatorLayout;
+    @BindView(R.id.mainRelativeLayout) LinearLayout mMainContainer;
+    @BindView(R.id.mainAccountList)Spinner mAccountList;
+    @BindView(R.id.mainAmount) TextInputEditText mAmount;
+    @BindView(R.id.mainFee) TextInputEditText mFee;
     LoadingDialogFragment mLoadingDialog;
-    private static final String TEST_PUB_API_KEY = "pk_test_TmY7jM0kEY3V7wi1dNBWItKJ";
-    private static final String TEST_SEC_API_KEY = "sk_test_HOD340Hji6fxpxqcZn14AegJ";
+    List<String> mAccountIdList;
+    private static final String TEST_PUB_API_KEY = "pk_test_cHZ8p6lv1KldUz7RkWC50VEO";
+    private static final String TEST_SEC_API_KEY = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
     private static final String LIVE_PUB_API_KEY = "N/A";
     private static final String LIVE_SEC_API_KEY = "N/A";
 
@@ -58,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initialize() {
         setSupportActionBar(mMainToolbar);
+        mLoadingDialog = new LoadingDialogFragment();
         addOnConnection();
     }
 
@@ -65,13 +78,16 @@ public class MainActivity extends AppCompatActivity {
         if(checkConnection()){
             mPay.setEnabled(true);
             listeners();
+            mLoadingDialog.setCancelable(false);
+            mLoadingDialog.show(getSupportFragmentManager(),"wait");
+            new createList().execute();
         }else {
             removeOffConnection();
         }
     }
 
     private void removeOffConnection() {
-      Snackbar.make(mCoordinatorLayout,"No Internet",Snackbar.LENGTH_INDEFINITE).setAction("Retry", new View.OnClickListener() {
+      Snackbar.make(mMainContainer,"No Internet",Snackbar.LENGTH_INDEFINITE).setAction("Retry", new View.OnClickListener() {
           @Override
           public void onClick(View v) {
               addOnConnection();
@@ -87,7 +103,35 @@ public class MainActivity extends AppCompatActivity {
                 pay();
             }
         });
+    }
 
+    private class createList extends AsyncTask<Void,Void,List<String>> {
+        @Override
+        protected List<String> doInBackground(Void... params) {
+            com.stripe.Stripe.apiKey = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
+            Map<String, Object> accountParams = new HashMap<>();
+            List<String> idList = new ArrayList<>();
+            mAccountIdList = new ArrayList<>();
+            try {
+                AccountCollection accountCollection = Account.list(accountParams);
+                List<Account> accountList = accountCollection.getData();
+                for(Integer i = 0;i<accountList.size();i++){
+                    idList.add(accountList.get(i).getEmail());
+                    mAccountIdList.add(accountList.get(i).getId());
+                }
+            } catch (AuthenticationException | InvalidRequestException | APIConnectionException | CardException | APIException e) {
+                e.printStackTrace();
+            }
+            return idList;
+        }
+
+        @Override
+        protected void onPostExecute(List<String> idList) {
+            ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getApplicationContext(),android.R.layout.simple_spinner_item,idList);
+            mLoadingDialog.dismiss();
+            mAccountList.setAdapter(arrayAdapter);
+            mAccountList.performClick();
+        }
     }
 
     private void pay() {
@@ -95,69 +139,84 @@ public class MainActivity extends AppCompatActivity {
         if (mCard == null) {
             messageDialog("Invalid Card Data");
         } else {
-            try {
-                mLoadingDialog = new LoadingDialogFragment();
-                mLoadingDialog.show(getSupportFragmentManager(),"wait");
-                Stripe stripe = new Stripe(getApplicationContext(), TEST_PUB_API_KEY);
-                stripe.createToken(mCard,
-                        new TokenCallback() {
-                            public void onSuccess(Token token) {
-                                new ChargeAsync().execute(token.getId());
-                            }
+            if(validDetails()) {
+                try {
+                    mLoadingDialog.show(getSupportFragmentManager(), "wait");
+                    com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(getApplicationContext(), TEST_PUB_API_KEY);
+                    stripe.createToken(mCard,
+                            new TokenCallback() {
+                                public void onSuccess(Token token) {
+                                    new chargeAccount().execute(token.getId(),mAccountIdList.get( mAccountList.getSelectedItemPosition()));
+                                }
 
-                            public void onError(Exception error) {
-                                toastView(error.getLocalizedMessage(), Toast.LENGTH_LONG);
+                                public void onError(Exception error) {
+                                    toastView(error.getLocalizedMessage(), Toast.LENGTH_LONG);
+                                    mLoadingDialog.dismiss();
+                                }
                             }
-                        }
-                );
-            }catch (IllegalArgumentException e){
-                mLoadingDialog.dismiss();
-                e.printStackTrace();
+                    );
+                } catch (IllegalArgumentException e) {
+                    mLoadingDialog.dismiss();
+                    e.printStackTrace();
+                }
             }
-
-        }
-
-    }
-
-
-    private class ChargeAsync extends AsyncTask<String,Void,String>{
-
-
-
-        @Override
-        protected String doInBackground(String... params) {
-           return charge(TEST_SEC_API_KEY,params[0]);
-        }
-
-        @Override
-        protected void onPostExecute(String s) {
-            super.onPostExecute(s);
-            mLoadingDialog.dismiss();
-            messageDialog(s);
         }
     }
 
-    private String charge(String apiKey,String token){
-        Map<String, Object> params = new HashMap<>();
-        params.put("amount", 100);
-        params.put("currency", "usd");
-        params.put("description", "Example charge");
-        params.put("source", token);
+    private boolean validDetails(){
+        if(mAmount.getText().toString().isEmpty()&&mAmount.getText().toString().length()<=0){
+            mAmount.requestFocus();
+            mAmount.setError("Enter a amount to pay");
+            return false;
+        }else if(mFee.getText().toString().isEmpty()&&mFee.getText().toString().length()<=0){
+            mFee.requestFocus();
+            mFee.setError("Enter application fee");
+            return false;
+        }else if(Integer.parseInt(mAmount.getText().toString())<Integer.parseInt(mFee.getText().toString())){
+            toastView("Fee cannot be greater than amount",Toast.LENGTH_LONG);
+            return false;
+        }
+        return true;
+    }
+
+
+    private void createCharge(String tokenId,String accId){
+        com.stripe.Stripe.apiKey = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
+
+        Map<String, Object> chargeParams = new HashMap<>();
+        chargeParams.put("amount", mAmount.getText().toString());
+        chargeParams.put("currency", "usd");
+        chargeParams.put("application_fee", mFee.getText().toString());
+        chargeParams.put("description", "testcharge");
+        chargeParams.put("source",tokenId );
+        chargeParams.put("on_behalf_of",accId);
+
+        Map<String, Object> destinationParams = new HashMap<>();
+        destinationParams.put("account", accId);
+        chargeParams.put("destination", destinationParams);
+
         try {
-            Charge charge = Charge.create(params,apiKey);
-            return charge.getDescription();
-            //Charge charge= Charge.create(params);
+            Charge.create(chargeParams);
         } catch (AuthenticationException | InvalidRequestException | APIConnectionException | CardException | APIException e) {
-            messageDialog(e.toString());
             e.printStackTrace();
         }
-        return null;
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
+    private class chargeAccount extends AsyncTask<String,Void,Void>{
+
+        @Override
+        protected Void doInBackground(String... params) {
+            createCharge(params[0],params[1]);
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            mLoadingDialog.dismiss();
+        }
     }
+
 
     private void messageDialog(String message) {
         if(message!=null) {
