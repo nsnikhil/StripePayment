@@ -2,16 +2,20 @@ package com.nrs.nsnik.stripepayment;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.design.widget.TextInputEditText;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
 import android.view.View;
 import android.widget.ArrayAdapter;
@@ -21,6 +25,8 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.nrs.nsnik.stripepayment.fragments.dialogFragments.LoadingDialogFragment;
+import com.stripe.Stripe;
+import com.stripe.android.model.Card;
 import com.stripe.exception.APIConnectionException;
 import com.stripe.exception.APIException;
 import com.stripe.exception.AuthenticationException;
@@ -30,7 +36,10 @@ import com.stripe.model.Account;
 import com.stripe.model.AccountCollection;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
+import com.stripe.model.CustomerCardCollection;
 import com.stripe.model.CustomerCollection;
+import com.stripe.model.ExternalAccount;
+import com.stripe.model.ExternalAccountCollection;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -65,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String TEST_SEC_API_KEY = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
     private static final String LIVE_PUB_API_KEY = "N/A";
     private static final String LIVE_SEC_API_KEY = "N/A";
+    private static final String NULL_VALUE = "N/A";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -87,7 +97,13 @@ public class MainActivity extends AppCompatActivity {
             mLoadingDialog.setCancelable(false);
             mLoadingDialog.show(getSupportFragmentManager(), "wait");
             new createList().execute();
-            new createCustomerList().execute();
+            SharedPreferences spf = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+            String custId = spf.getString(getResources().getString(R.string.prefcustid),NULL_VALUE);
+            if(!custId.equalsIgnoreCase(NULL_VALUE)){
+                new getCustomerData().execute(custId);
+            }else {
+               toastView("No account found add one!",Toast.LENGTH_LONG);
+            }
         } else {
             removeOffConnection();
         }
@@ -108,9 +124,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 if(validDetails()) {
-                    chargeAccount account = new chargeAccount(mAmount.getText().toString(), mFee.getText().toString()
-                            , mAccountIdList.get(mAccountList.getSelectedItemPosition()), mCustomerList.getSelectedItem().toString());
-                    account.execute();
+                    SharedPreferences spf = PreferenceManager.getDefaultSharedPreferences(MainActivity.this);
+                    String custId = spf.getString(getResources().getString(R.string.prefcustid),NULL_VALUE);
+                    if(!custId.equalsIgnoreCase(NULL_VALUE)){
+                        chargeAccount account = new chargeAccount(mAmount.getText().toString(), mFee.getText().toString()
+                                , mAccountIdList.get(mAccountList.getSelectedItemPosition()), custId);
+                        account.execute();
+                    }else {
+                        toastView("No account found add one!",Toast.LENGTH_LONG);
+                    }
+
                 }
             }
         });
@@ -120,6 +143,35 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(MainActivity.this,AddCustomerActivity.class));
             }
         });
+    }
+
+    private class getCustomerData extends AsyncTask<String,Void,List<String>>{
+        @Override
+        protected List<String> doInBackground(String... params) {
+            Stripe.apiKey = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
+            Map<String, Object> cardParams = new HashMap<>();
+            cardParams.put("object", "card");
+            List<String> cardLast4List = new ArrayList<>();
+            try {
+                Customer customer = Customer.retrieve(params[0]);
+                ExternalAccountCollection accountCollection = customer.getSources().all(cardParams);
+                List<ExternalAccount> externalAccountList = accountCollection.getData();
+                for(int i=0;i<externalAccountList.size();i++){
+                    com.stripe.model.Card source = (com.stripe.model.Card) customer.getSources().retrieve(externalAccountList.get(i).getId());
+                    cardLast4List.add(source.getLast4());
+                }
+            } catch (AuthenticationException | InvalidRequestException | APIConnectionException | APIException | CardException e) {
+                e.printStackTrace();
+            }
+            return cardLast4List;
+        }
+
+        @Override
+        protected void onPostExecute(List<String> strings) {
+            super.onPostExecute(strings);
+            ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_spinner_dropdown_item, strings);
+            mCustomerList.setAdapter(adapter);
+        }
     }
 
     private class createList extends AsyncTask<Void, Void, List<String>> {
@@ -146,8 +198,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(List<String> idList) {
-            ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_spinner_item, idList);
+            ArrayAdapter<String> arrayAdapter = new ArrayAdapter<>(getApplicationContext(), android.R.layout.simple_spinner_dropdown_item, idList);
             mAccountList.setAdapter(arrayAdapter);
+            mLoadingDialog.dismiss();
         }
     }
 

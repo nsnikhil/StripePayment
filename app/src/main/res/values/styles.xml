@@ -26,6 +26,11 @@
         <item name="android:layout_height">match_parent</item>
     </style>
 
+    <style name="twentyfour">
+        <item name="android:layout_width">@dimen/tewntyfour</item>
+        <item name="android:layout_height">@dimen/tewntyfour</item>
+    </style>
+
     <style name="verticalLinearLayout" parent="matchParent">
         <item name="android:orientation">vertical</item>
     </style>

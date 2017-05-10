@@ -23,7 +23,7 @@
                 android:padding="@dimen/sixteen"
                 android:textSize="18sp"
                 android:textColor="@color/black"
-                android:text="@string/from" />
+                android:text="@string/choosecard" />
 
             <Spinner
                 android:id="@+id/mainCustomerList"

@@ -5,4 +5,5 @@
     <dimen name="sixteen">16dp</dimen>
     <dimen name="drawerWidth">240dp</dimen>
     <dimen name="imageSize">180dp</dimen>
+    <dimen name="tewntyfour">24dp</dimen>
 </resources>

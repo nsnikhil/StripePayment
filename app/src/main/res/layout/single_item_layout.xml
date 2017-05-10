@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+   style="@style/horizontalLinearLayout">
+
+    <TextView
+       style="@style/wrapContent"
+        android:textSize="20sp"
+        android:id="@+id/singleCardNo"
+        android:fontFamily="sans-serif-thin"
+        android:textStyle="bold"
+        android:layout_margin="@dimen/sixteen"
+        android:textColor="@color/black"
+        android:text="@string/app_name"/>
+
+    <ImageView
+        android:id="@+id/singleCardDelete"
+        android:layout_alignParentEnd="true"
+        android:layout_margin="@dimen/sixteen"
+        android:src="@drawable/ic_delete_black_48dp"
+        style="@style/twentyfour"  />
+
+    <ImageView
+        android:id="@+id/singleCardEdit"
+        android:visibility="gone"
+        android:layout_toStartOf="@id/singleCardDelete"
+        android:layout_margin="@dimen/sixteen"
+        android:src="@drawable/ic_mode_edit_black_48dp"
+        style="@style/twentyfour"  />
+
+</RelativeLayout>

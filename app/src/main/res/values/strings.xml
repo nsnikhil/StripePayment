@@ -8,7 +8,9 @@
     <string name="fee">Fee</string>
     <string name="addcustomer">Add Customer</string>
     <string name="from">From</string>
+    <string name="choosecard">Choose Card</string>
     <string name="to">To</string>
+    <string name="prefcustid">spfcustid</string>
 
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>

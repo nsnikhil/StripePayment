@@ -15,6 +15,11 @@
         android:padding="@dimen/eight"
         style="@style/stretchedVertically"/>
 
+    <ListView
+        android:id="@+id/customerCardList"
+        android:divider="@null"
+        style="@style/stretchedVertically"/>
+
     <Button
         style="@style/stretchedVertically"
         android:text="@string/addcustomer"
