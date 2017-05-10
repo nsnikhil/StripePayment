@@ -72,6 +72,7 @@ public class AddCustomerActivity extends AppCompatActivity implements InterfaceC
             messageDialog("Invalid Card Data");
         } else {
             try {
+                mLoadingDialog =  new LoadingDialogFragment();
                 mLoadingDialog.show(getSupportFragmentManager(), "wait");
                 com.stripe.android.Stripe stripe = new com.stripe.android.Stripe(getApplicationContext(), TEST_PUB_API_KEY);
                 stripe.createToken(mCard,
@@ -131,6 +132,7 @@ public class AddCustomerActivity extends AppCompatActivity implements InterfaceC
             if(s.contains("cus_")){
                 SharedPreferences spf = PreferenceManager.getDefaultSharedPreferences(AddCustomerActivity.this);
                 spf.edit().putString(getResources().getString(R.string.prefcustid),s).apply();
+                loadCardList();
                 toastView("Customer Created Successfully",Toast.LENGTH_SHORT);
             }else {
                 toastView(s,Toast.LENGTH_LONG);
@@ -189,6 +191,7 @@ public class AddCustomerActivity extends AppCompatActivity implements InterfaceC
         @Override
         protected void onPostExecute(Void aVoid) {
             mLoadingDialog.dismiss();
+            loadCardList();
             super.onPostExecute(aVoid);
         }
     }
@@ -217,7 +220,6 @@ public class AddCustomerActivity extends AppCompatActivity implements InterfaceC
     private void initialize() {
         setSupportActionBar(mCustomerToolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        mLoadingDialog = new LoadingDialogFragment();
         addOnConnection();
     }
 
@@ -245,6 +247,7 @@ public class AddCustomerActivity extends AppCompatActivity implements InterfaceC
         SharedPreferences spf = PreferenceManager.getDefaultSharedPreferences(AddCustomerActivity.this);
         String custId = spf.getString(getResources().getString(R.string.prefcustid),NULL_VALUE);
         if(!custId.equalsIgnoreCase(NULL_VALUE)){
+            mLoadingDialog =  new LoadingDialogFragment();
             mLoadingDialog.setCancelable(false);
             mLoadingDialog.show(getSupportFragmentManager(),"dialog");
             new getCardList().execute(custId);

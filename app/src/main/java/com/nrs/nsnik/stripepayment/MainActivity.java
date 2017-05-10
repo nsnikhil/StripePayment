@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     FloatingActionButton mAddCustomer;
     LoadingDialogFragment mLoadingDialog;
     List<String> mAccountIdList;
+    List<com.stripe.model.Card> mCardList;
     private static final String TEST_PUB_API_KEY = "pk_test_cHZ8p6lv1KldUz7RkWC50VEO";
     private static final String TEST_SEC_API_KEY = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
     private static final String LIVE_PUB_API_KEY = "N/A";
@@ -128,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
                     String custId = spf.getString(getResources().getString(R.string.prefcustid),NULL_VALUE);
                     if(!custId.equalsIgnoreCase(NULL_VALUE)){
                         chargeAccount account = new chargeAccount(mAmount.getText().toString(), mFee.getText().toString()
-                                , mAccountIdList.get(mAccountList.getSelectedItemPosition()), custId);
+                                , mAccountIdList.get(mAccountList.getSelectedItemPosition()), custId,mCardList.get(mCustomerList.getSelectedItemPosition()).getId());
                         account.execute();
                     }else {
                         toastView("No account found add one!",Toast.LENGTH_LONG);
@@ -151,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
             Stripe.apiKey = "sk_test_vb9Wu57BSwTRcxB7wqa0tDjC";
             Map<String, Object> cardParams = new HashMap<>();
             cardParams.put("object", "card");
+            mCardList = new ArrayList<>();
             List<String> cardLast4List = new ArrayList<>();
             try {
                 Customer customer = Customer.retrieve(params[0]);
@@ -158,6 +160,7 @@ public class MainActivity extends AppCompatActivity {
                 List<ExternalAccount> externalAccountList = accountCollection.getData();
                 for(int i=0;i<externalAccountList.size();i++){
                     com.stripe.model.Card source = (com.stripe.model.Card) customer.getSources().retrieve(externalAccountList.get(i).getId());
+                    mCardList.add(source);
                     cardLast4List.add(source.getLast4());
                 }
             } catch (AuthenticationException | InvalidRequestException | APIConnectionException | APIException | CardException e) {
@@ -249,13 +252,14 @@ public class MainActivity extends AppCompatActivity {
 
     private class chargeAccount extends AsyncTask<String, Void, Void> {
 
-        String mAmount,mFee,mAccId,mCustId;
+        String mAmount,mFee,mAccId,mCustId,mCardId;
 
-        chargeAccount(String amount,String fee,String accId,String custId){
+        chargeAccount(String amount,String fee,String accId,String custId,String cardId){
             mAmount = amount;
             mFee = fee;
             mAccId = accId;
             mCustId = custId;
+            mCardId = cardId;
         }
 
         @Override
@@ -272,6 +276,7 @@ public class MainActivity extends AppCompatActivity {
             Map<String, Object> destinationParams = new HashMap<>();
             destinationParams.put("account",  mAccId);
             chargeParams.put("destination", destinationParams);
+            chargeParams.put("source",mCardId);
 
             try {
                 Charge.create(chargeParams);
